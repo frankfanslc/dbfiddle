@@ -4,6 +4,7 @@ header("Last-Modified: " . gmdate("D, d M Y H:i:s") . " GMT");
 header("Cache-Control: no-store, no-cache, must-revalidate");
 header("Cache-Control: post-check=0, pre-check=0", false);
 $connection = pg_connect('dbname=postgres user=fiddle password=********');
+if(!$connection) trigger_error('cant connect',E_USER_ERROR);
 $user = 'fiddle_';
 $password = '';
 for ($i = 0; $i<20; $i++) $user.=chr(rand(97,122));
