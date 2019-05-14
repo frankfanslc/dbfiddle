@@ -21,6 +21,12 @@ if(pg_result_error($res)) trigger_error(htmlentities(pg_result_error_field($res,
 pg_close($connection);
 
 $connection = pg_connect("dbname=postgres user=$user password=$password");
+
+pg_send_query($connection,'select 1;');
+$res = pg_get_result($connection);
+pg_field_type($res,0);
+pg_free_result($res);
+
 $queries = json_decode(file_get_contents('php://input'), true);
 $return = [];
 foreach($queries as $query){
