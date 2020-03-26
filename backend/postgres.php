@@ -3,24 +3,28 @@ header('X-Powered-By: ');
 header("Last-Modified: " . gmdate("D, d M Y H:i:s") . " GMT");
 header("Cache-Control: no-store, no-cache, must-revalidate");
 header("Cache-Control: post-check=0, pre-check=0", false);
-$connection = pg_connect('dbname=postgres user=fiddle password=********');
+$connection = pg_connect('dbname=postgres user=postgres');
 if(!$connection) trigger_error('cant connect',E_USER_ERROR);
-$user = 'fiddle_';
+$db = '';
 $password = '';
-for ($i = 0; $i<20; $i++) $user.=chr(rand(97,122));
+for ($i = 0; $i<20; $i++) $db.=chr(rand(97,122));
 for ($i = 0; $i<30; $i++) $password.=chr(rand(97,122));
-pg_send_query($connection,"create user $user password '$password'");
+shell_exec("cp -a /mnt/template /mnt/image/$db");
+$uuid = trim(shell_exec("uuid"));
+shell_exec("xfs_admin -U $uuid /mnt/image/$db");
+$lo = trim(shell_exec("udisksctl loop-setup -f /mnt/image/$db | grep -oP '(?<=loop)([0-9]+)(?=.$)'"));
+$mt = trim(shell_exec("udisksctl mount -b /dev/loop$lo | grep -oP '(?<=/)([-0-9a-f]+)(?=.$)'"));
+pg_send_query($connection,"create user u_$db password '$password'");
 $res = pg_get_result($connection);
 if(pg_result_error($res)) trigger_error(htmlentities(pg_result_error_field($res,PGSQL_DIAG_SQLSTATE).pg_result_error($res), ENT_QUOTES), E_USER_ERROR);
-pg_send_query($connection,"grant $user to fiddle");
+pg_send_query($connection,"create tablespace ts_$db owner u_$db location '/media/postgres/$mt'");
 $res = pg_get_result($connection);
 if(pg_result_error($res)) trigger_error(htmlentities(pg_result_error_field($res,PGSQL_DIAG_SQLSTATE).pg_result_error($res), ENT_QUOTES), E_USER_ERROR);
-pg_send_query($connection,"create schema authorization $user");
+pg_send_query($connection,"create database db_$db template postgres tablespace ts_$db");
 $res = pg_get_result($connection);
 if(pg_result_error($res)) trigger_error(htmlentities(pg_result_error_field($res,PGSQL_DIAG_SQLSTATE).pg_result_error($res), ENT_QUOTES), E_USER_ERROR);
-pg_close($connection);
 
-$connection = pg_connect("dbname=postgres user=$user password=$password");
+$connection = pg_connect("dbname=db_$db user=u_$db password=$password");
 
 pg_send_query($connection,'select 1;');
 $res = pg_get_result($connection);
@@ -67,14 +71,19 @@ foreach($queries as $query){
 }
 pg_close($connection);
 
-$connection = pg_connect('dbname=postgres user=fiddle password=********');
-pg_send_query($connection,"drop schema $user cascade");
+$connection = pg_connect('dbname=postgres user=postgres');
+pg_send_query($connection,"drop database db_$db");
 $res = pg_get_result($connection);
 if(pg_result_error($res)) trigger_error(htmlentities(pg_result_error_field($res,PGSQL_DIAG_SQLSTATE).pg_result_error($res), ENT_QUOTES), E_USER_ERROR);
-pg_send_query($connection,"drop user $user");
+pg_send_query($connection,"drop tablespace ts_$db");
+$res = pg_get_result($connection);
+if(pg_result_error($res)) trigger_error(htmlentities(pg_result_error_field($res,PGSQL_DIAG_SQLSTATE).pg_result_error($res), ENT_QUOTES), E_USER_ERROR);
+pg_send_query($connection,"drop user u_$db");
 $res = pg_get_result($connection);
 if(pg_result_error($res)) trigger_error(htmlentities(pg_result_error_field($res,PGSQL_DIAG_SQLSTATE).pg_result_error($res), ENT_QUOTES), E_USER_ERROR);
 pg_close($connection);
+
+shell_exec("(sleep 5; udisksctl unmount -b /dev/loop$lo; udisksctl loop-delete -b /dev/loop$lo; rm /mnt/image/$db;) 2>/dev/null >/dev/null &");
 
 echo json_encode($return);
 ?>
