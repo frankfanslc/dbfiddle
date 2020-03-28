@@ -5,19 +5,14 @@ header("Cache-Control: no-store, no-cache, must-revalidate");
 header("Cache-Control: post-check=0, pre-check=0", false);
 $connection = pg_connect('dbname=postgres user=postgres');
 if(!$connection) trigger_error('cant connect',E_USER_ERROR);
-$db = '';
 $password = '';
-for ($i = 0; $i<20; $i++) $db.=chr(rand(97,122));
 for ($i = 0; $i<30; $i++) $password.=chr(rand(97,122));
-shell_exec("cp -a /mnt/template /mnt/image/$db");
-$uuid = trim(shell_exec("uuid"));
-shell_exec("xfs_admin -U $uuid /mnt/image/$db");
-$lo = trim(shell_exec("udisksctl loop-setup -f /mnt/image/$db | grep -oP '(?<=loop)([0-9]+)(?=.$)'"));
-$mt = trim(shell_exec("udisksctl mount -b /dev/loop$lo | grep -oP '(?<=/)([-0-9a-f]+)(?=.$)'"));
+$db = exec("/usr/local/bin/pgxfs");
+$db || exit('pgxfs failed');
 pg_send_query($connection,"create user u_$db password '$password'");
 $res = pg_get_result($connection);
 if(pg_result_error($res)) trigger_error(htmlentities(pg_result_error_field($res,PGSQL_DIAG_SQLSTATE).pg_result_error($res), ENT_QUOTES), E_USER_ERROR);
-pg_send_query($connection,"create tablespace ts_$db owner u_$db location '/media/postgres/$mt'");
+pg_send_query($connection,"create tablespace ts_$db owner u_$db location '/mnt/db_$db'");
 $res = pg_get_result($connection);
 if(pg_result_error($res)) trigger_error(htmlentities(pg_result_error_field($res,PGSQL_DIAG_SQLSTATE).pg_result_error($res), ENT_QUOTES), E_USER_ERROR);
 pg_send_query($connection,"create database db_$db template postgres tablespace ts_$db");
@@ -74,16 +69,22 @@ pg_close($connection);
 $connection = pg_connect('dbname=postgres user=postgres');
 pg_send_query($connection,"drop database db_$db");
 $res = pg_get_result($connection);
-if(pg_result_error($res)) trigger_error(htmlentities(pg_result_error_field($res,PGSQL_DIAG_SQLSTATE).pg_result_error($res), ENT_QUOTES), E_USER_ERROR);
+if(pg_result_error($res)){
+  trigger_error(htmlentities(pg_result_error_field($res,PGSQL_DIAG_SQLSTATE).pg_result_error($res), ENT_QUOTES), E_USER_ERROR);
+  exit;
+}
 pg_send_query($connection,"drop tablespace ts_$db");
 $res = pg_get_result($connection);
-if(pg_result_error($res)) trigger_error(htmlentities(pg_result_error_field($res,PGSQL_DIAG_SQLSTATE).pg_result_error($res), ENT_QUOTES), E_USER_ERROR);
+if(pg_result_error($res)) {
+  trigger_error(htmlentities(pg_result_error_field($res,PGSQL_DIAG_SQLSTATE).pg_result_error($res), ENT_QUOTES), E_USER_ERROR);
+  exit;
+}
 pg_send_query($connection,"drop user u_$db");
 $res = pg_get_result($connection);
 if(pg_result_error($res)) trigger_error(htmlentities(pg_result_error_field($res,PGSQL_DIAG_SQLSTATE).pg_result_error($res), ENT_QUOTES), E_USER_ERROR);
 pg_close($connection);
 
-shell_exec("(sleep 5; udisksctl unmount -b /dev/loop$lo; udisksctl loop-delete -b /dev/loop$lo; rm /mnt/image/$db;) 2>/dev/null >/dev/null &");
+shell_exec("(sleep 10; rm -rf /mnt/db_$db;) 2>/dev/null >/dev/null &");
 
 echo json_encode($return);
 ?>
