@@ -3,23 +3,14 @@ header('X-Powered-By: ');
 header("Last-Modified: " . gmdate("D, d M Y H:i:s") . " GMT");
 header("Cache-Control: no-store, no-cache, must-revalidate");
 header("Cache-Control: post-check=0, pre-check=0", false);
-$connection = pg_connect('dbname=postgres user=postgres');
-if(!$connection) trigger_error('cant connect',E_USER_ERROR);
-$password = '';
-for ($i = 0; $i<30; $i++) $password.=chr(rand(97,122));
-$db = exec("/usr/local/bin/pgxfs");
-$db || exit('pgxfs failed');
-pg_send_query($connection,"create user u_$db password '$password'");
-$res = pg_get_result($connection);
-if(pg_result_error($res)) trigger_error(htmlentities(pg_result_error_field($res,PGSQL_DIAG_SQLSTATE).pg_result_error($res), ENT_QUOTES), E_USER_ERROR);
-pg_send_query($connection,"create tablespace ts_$db owner u_$db location '/mnt/db_$db'");
-$res = pg_get_result($connection);
-if(pg_result_error($res)) trigger_error(htmlentities(pg_result_error_field($res,PGSQL_DIAG_SQLSTATE).pg_result_error($res), ENT_QUOTES), E_USER_ERROR);
-pg_send_query($connection,"create database db_$db template postgres tablespace ts_$db");
-$res = pg_get_result($connection);
-if(pg_result_error($res)) trigger_error(htmlentities(pg_result_error_field($res,PGSQL_DIAG_SQLSTATE).pg_result_error($res), ENT_QUOTES), E_USER_ERROR);
+$o = [];
+exec('/usr/local/bin/fiddledb_create',$o);
+if(count($o)!==2) exit('fiddledb_create did not return 2 lines');
+$db = 'db_'.$o[0];
+$user = 'u_'.$o[0];
+$password = 'Password'.$o[1];
 
-$connection = pg_connect("dbname=db_$db user=u_$db password=$password");
+$connection = pg_connect("dbname=$db user=$user password=$password");
 
 pg_send_query($connection,'select 1;');
 $res = pg_get_result($connection);
@@ -66,25 +57,7 @@ foreach($queries as $query){
 }
 pg_close($connection);
 
-$connection = pg_connect('dbname=postgres user=postgres');
-pg_send_query($connection,"drop database db_$db");
-$res = pg_get_result($connection);
-if(pg_result_error($res)){
-  trigger_error(htmlentities(pg_result_error_field($res,PGSQL_DIAG_SQLSTATE).pg_result_error($res), ENT_QUOTES), E_USER_ERROR);
-  exit;
-}
-pg_send_query($connection,"drop tablespace ts_$db");
-$res = pg_get_result($connection);
-if(pg_result_error($res)) {
-  trigger_error(htmlentities(pg_result_error_field($res,PGSQL_DIAG_SQLSTATE).pg_result_error($res), ENT_QUOTES), E_USER_ERROR);
-  exit;
-}
-pg_send_query($connection,"drop user u_$db");
-$res = pg_get_result($connection);
-if(pg_result_error($res)) trigger_error(htmlentities(pg_result_error_field($res,PGSQL_DIAG_SQLSTATE).pg_result_error($res), ENT_QUOTES), E_USER_ERROR);
-pg_close($connection);
-
-shell_exec("(sleep 10; rm -rf /mnt/db_$db;) 2>/dev/null >/dev/null &");
+exec('/usr/local/bin/fiddledb_drop '.$o[0].' 2>/dev/null >/dev/null &');
 
 echo json_encode($return);
 ?>
