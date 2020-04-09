@@ -11,6 +11,7 @@ $user = 'u_'.$o[0];
 $password = 'Password'.$o[1];
 
 $connection = pg_connect("dbname=$db user=$user password=$password");
+pg_query($connection,'set search_path to public,x_tablefunc,x_pg_trgm,x_intarray,x_hstore,x_tsm_system_rows,x_unaccent,x_ltree;');
 
 pg_send_query($connection,'select 1;');
 $res = pg_get_result($connection);
