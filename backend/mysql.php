@@ -4,7 +4,7 @@ header("Last-Modified: " . gmdate("D, d M Y H:i:s") . " GMT");
 header("Cache-Control: no-store, no-cache, must-revalidate");
 header("Cache-Control: post-check=0, pre-check=0", false);
 $o = [];
-exec('/usr/local/bin/fiddledb_create',$o);
+exec('/usr/local/bin/fiddledb_create'.(isset($_GET['sample'])?' sample':''),$o);
 if(count($o)!==2) exit('fiddledb_create did not return 2 lines');
 $db = 'db_'.$o[0];
 $user = 'u_'.$o[0];
