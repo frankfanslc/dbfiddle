@@ -21,7 +21,11 @@ foreach($queries as $query){
     set_error_handler(function($errno,$errmsg,$errfile) use($result) { $result->message = substr($errmsg,strpos($errmsg,':')+2); });
     while ($row = ibase_fetch_row($response,IBASE_TEXT)) {
       foreach($row as $j=>$field){
-        $result->data[$j][$i] = $field;
+        if(mb_check_encoding($field,'UTF-8')){
+          $result->data[$j][$i] = $field;
+        }else{
+          $result->message = 'field invalid for utf8 encoding';
+        }
       }
       $i++;
     }
