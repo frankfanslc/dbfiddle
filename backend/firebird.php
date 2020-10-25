@@ -23,7 +23,7 @@ foreach($queries as $query){
       foreach($row as $j=>$field){
         if(mb_check_encoding($field,'UTF-8')){
           $result->data[$j][$i] = $field;
-          $result->data[$j][$i] = '';
+          $result->data[$j][$i] = ' ';
         }else{
           $result->message = 'field invalid for utf8 encoding';
         }
