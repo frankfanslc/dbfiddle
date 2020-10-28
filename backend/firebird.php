@@ -8,7 +8,7 @@ $o = [];
 exec('/usr/local/bin/fiddledb_create',$o);
 $db = 'db_'.$o[0];
 
-$connection = ibase_connect("localhost:/mnt/$db/fiddle.fdb", 'fiddle', 'fiddle') or exit('Could not connect to the server!');
+$connection = ibase_connect("localhost:/mnt/$db/fiddle.fdb", 'fiddle', 'fiddle', 'utf8') or exit('Could not connect to the server!');
 
 $queries = json_decode(file_get_contents('php://input'), true);
 $return = [];
@@ -34,7 +34,7 @@ foreach($queries as $query){
     for ($i = 0; $i < ibase_num_fields($response); $i++) {
       $col_info = ibase_field_info($response, $i);
       $result->head[$i] = $col_info['alias'];
-      $result->align[$i] = in_array($col_info['type'],['INTEGER','INT64','DECIMAL','FLOAT','NUMERIC','DOUBLE','SMALLINT'])?STR_PAD_LEFT:STR_PAD_RIGHT;
+      $result->align[$i] = in_array($col_info['type'],['INTEGER','INT64','DECIMAL','FLOAT','NUMERIC','DOUBLE','SMALLINT','BIGINT'])?STR_PAD_LEFT:STR_PAD_RIGHT;
     }
     ibase_free_result($response);
   } elseif (gettype($response) === "integer") {
