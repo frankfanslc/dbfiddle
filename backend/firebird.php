@@ -8,7 +8,7 @@ $o = [];
 exec('/usr/local/bin/fiddledb_create',$o);
 $db = 'db_'.$o[0];
 
-$connection = ibase_connect("localhost:/mnt/$db/fiddle.fdb", 'fiddle', 'fiddle', 'utf8') or exit('Could not connect to the server!');
+$connection = ibase_connect("localhost:/mnt/$db/fiddle.fdb", 'fiddle', 'fiddle', 'UTF8') or exit('Could not connect to the server!');
 
 $queries = json_decode(file_get_contents('php://input'), true);
 $return = [];
