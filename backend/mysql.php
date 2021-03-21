@@ -23,6 +23,7 @@ foreach($queries as $query){
         if($output!==true){
           $i = 0;
           while ($column = $output->fetch_field()){
+            $is_binary[$i] = $column->flags & 16;
             $result->head[$i] = $column->name;
             $result->align[$i] = in_array($column->type,[1,2,3,4,5,8,9,246])?STR_PAD_LEFT:STR_PAD_RIGHT;
             $i++;
@@ -30,7 +31,7 @@ foreach($queries as $query){
           $i = 0;
           while ($row = $output->fetch_row()) {
             foreach($row as $j=>$field){
-              $result->data[$j][$i] = $field;
+              $result->data[$j][$i] = $is_binary[$j] ? bin2hex($field) : $field;
             }
             $i++;
           }
